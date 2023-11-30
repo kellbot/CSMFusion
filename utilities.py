@@ -75,3 +75,22 @@ def getAllSketchProfiles(sketch):
     for prof in sketch.profiles:
         profs.add(prof)
     return profs
+
+def findProfileContainingPoint(sketch, point: adsk.core.Point3D):
+    try:
+        # Iterate through sketch profiles
+        for profile in sketch.profiles:
+            # Check if the origin is inside the profil
+                if is_point_inside_profile(point, profile):
+                    return profile
+
+        # Return None if no profile contains the origin
+        return None
+
+    except Exception as e:
+        ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+        return None
+    
+# really only checks the bounding box    
+def is_point_inside_profile(point: adsk.core.Point3D, profile: adsk.fusion.Profile):
+    return profile.boundingBox.minPoint.x <= point.x <= profile.boundingBox.maxPoint.x and profile.boundingBox.minPoint.y <= point.y <=profile.boundingBox.maxPoint.y

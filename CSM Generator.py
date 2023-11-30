@@ -18,7 +18,7 @@ def run(context):
         ui  = app.userInterface
         
         createDrum()
-        createShell()
+       # createShell()
 
     except:
         if ui:

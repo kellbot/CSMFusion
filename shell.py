@@ -40,9 +40,8 @@ def createShell():
 
     hullSketch = sketches.add(topFace)
 
-   # don't need rectangles
-
-    circles.addByCenterRadius(adsk.core.Point3D.create(-(shellRadius - shellThickness/2), 0, 0), 0.4)
+   # half moon nub
+    circles.addByCenterRadius(adsk.core.Point3D.create(-(shellRadius + 1), 0, 0), 0.4)
     
     domeInput = extrudes.createInput(baseSketch.profiles.item(0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
     extrudeDistance = adsk.fusion.DistanceExtentDefinition.create(adsk.core.ValueInput.createByReal(4.9))
