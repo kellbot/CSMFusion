@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"Kelly Maguire",
+	"description":	{
+		"":	"Tool for generating circular sock machine parts\t\t"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
