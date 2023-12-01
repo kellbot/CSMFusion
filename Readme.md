@@ -4,6 +4,8 @@ In progress port of RKStar42's [OpenSCAD Circular Knitting Machine](https://www.
 There is a long list of parts to port over so far I have completed
 * needle drum
 
+Want to see what the script generates without having to load it up? Check out [this preview](https://a360.co/3N7CZcM)
+
 ## Why do this?
 To learn the Fusion 360 API, and also because while I appreciate everything that OpenSCAD is, actually using it is not my cup of tea.
 

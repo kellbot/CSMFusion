@@ -17,7 +17,7 @@ def run(context):
         app = adsk.core.Application.get()
         ui  = app.userInterface
         
-        #createDrum()
+        createDrum()
         createShell()
 
     except:
