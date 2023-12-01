@@ -1,5 +1,5 @@
 import adsk.core, adsk.fusion, adsk.cam, traceback, math
-
+from adsk.core import Point3D
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -45,6 +45,36 @@ def chamferExtrusion(extrude, horizontal, vertical):
     
     # Create the chamfer.
     return chamfers.add(input)     
+
+## Drawing
+
+# Create a polygon in a sketch
+def drawPolygon(sketch: adsk.fusion.Sketch, center_point: Point3D, num_sides: int, distance: float):
+    try:
+        if num_sides < 3:
+            raise ValueError("Number of sides must be 3 or greater.")
+
+        # Calculate the angle between each vertex
+        angle_offset = 2 * math.pi / num_sides
+
+        # Calculate the coordinates of the polygon vertices
+        vertices = [
+            adsk.core.Point3D.create(center_point.x + distance * math.cos(angle_offset * i),
+                                     center_point.y + distance * math.sin(angle_offset * i),
+                                     center_point.z)
+            for i in range(num_sides)
+        ]
+
+        # Create sketch lines to form the polygon
+        lines = sketch.sketchCurves.sketchLines
+        for i in range(num_sides):
+            start_point = vertices[i]
+            end_point = vertices[(i + 1) % num_sides]  # Connect the last vertex to the first one
+            lines.addByTwoPoints(start_point, end_point)
+
+    except Exception as e:
+        ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
 
 # Creates a 360 degree circular pattern
 def circularPattern(featureCollection, quantity):
@@ -109,4 +139,16 @@ def createSketchAtAngle(existing_plane: adsk.fusion.ConstructionPlane, angle_deg
 
     except Exception as e:
         ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+        return None
+
+# I feel like there's probably already something in the API that does this but I can't find it
+# Note: this doesn't do anything to validate units, so god help you there    
+def createPointByOffset(originalPoint: Point3D, offset: dict) -> Point3D:
+    try: 
+        if (len(offset) != 3):
+            raise ValueError(f"Offset should be a dictionary of 3 values for x, y, and z")
+        return Point3D.create(originalPoint.x + offset["x"], originalPoint.y + offset["y"], originalPoint.z + offset["z"])    
+
+    except ValueError as e:
+        ui.messageBox('Failed:\n{}'.format(e))
         return None

@@ -20,6 +20,8 @@ def run(context):
         createDrum()
         createShell()
 
+        design.activateRootComponent()
+
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
