@@ -48,10 +48,30 @@ def createShell():
     lines = hullSketch.sketchCurves.sketchLines
 
     cubeCenter = Point3D.create(-shellRadius, 0, 0)
-    lines.addCenterPointRectangle(cubeCenter, Point3D.create(cubeCenter.x + 0.25, cubeCenter.y + 0.4, cubeCenter.z))
+    lines.addCenterPointRectangle(cubeCenter, Point3D.create(cubeCenter.x + 0.2, cubeCenter.y + 0.4, cubeCenter.z))
 
     extrudeDistance = ValueInput.createByReal(-4.9)
     extrudes.addSimple(getAllSketchProfiles(hullSketch), extrudeDistance, FeatureOperations.JoinFeatureOperation)
+
+
+
+    # create plane tangent to shell at slot point
+    planeInput = shell.constructionPlanes.createInput()
+    planeInput.setByTangent(baseExtrude.sideFaces.item(1), ValueInput.createByString(str(-90 - (15*(120/drumDiameter)))+'deg'), shell.yZConstructionPlane)
+    slotPlane = shell.constructionPlanes.add(planeInput)
+
+
+    # Creates a slot at a fixed distance from the cam support
+    slotSketch = shell.sketches.add(slotPlane)
+    slotArcs = slotSketch.sketchCurves.sketchArcs
+    slotLines = slotSketch.sketchCurves.sketchLines
+    topCenter = Point3D.create(0,3.85, 0)
+    bottomCenter = Point3D.create(0,3.85 + 1.1, 0)
+    slotArcs.addByCenterStartSweep(topCenter, Point3D.create(-.8,  topCenter.y, 0), math.pi)
+    slotArcs.addByCenterStartSweep(bottomCenter, Point3D.create(-.8,  bottomCenter.y, 0), -math.pi)
+    slotLines.addByTwoPoints(Point3D.create(-0.8, topCenter.y, 0), Point3D.create(-0.8, bottomCenter.y, 0))
+    slotLines.addByTwoPoints(Point3D.create(0.8, topCenter.y, 0), Point3D.create(0.8, bottomCenter.y, 0))
+    slotPadExtrude = extrudes.addSimple(slotSketch.profiles.item(0), ValueInput.createByReal(-0.4),FeatureOperations.JoinFeatureOperation)
 
 
     bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, Settings.camAngle - 9)
@@ -67,20 +87,9 @@ def createShell():
     capInput.setAngleExtent(False, ValueInput.createByString('180 deg'))
     bumper2 = revolves.add(capInput)
 
-    # create plane tangent to shell at slot point
-    planeInput = shell.constructionPlanes.createInput()
-    planeInput.setByTangent(baseExtrude.faces.item(1), ValueInput.createByString('0 deg'), shell.yZConstructionPlane)
-    slotPlane = shell.constructionPlanes.add(planeInput)
-
-
-    # Creates a slot at a fixed distance from the cam support
-    slotSketch = createSketchAtAngle(slotPlane, 15 * 120/drumDiameter)
-    slotArcs = slotSketch.sketchCurves.sketchArcs
-    topCenter = Point3D.create()
-    slotArcs.addByCenterStartSweep()
-
     bumper = adsk.core.ObjectCollection.create()
     bumper.add(bumper1)
     bumper.add(bumper2)
+    bumper.add(slotPadExtrude)
     mirrors = shell.features.mirrorFeatures
     mirrors.add(mirrors.createInput(bumper, shell.xZConstructionPlane))
