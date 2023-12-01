@@ -67,11 +67,24 @@ def createShell():
     slotLines = slotSketch.sketchCurves.sketchLines
     topCenter = Point3D.create(0,3.85, 0)
     bottomCenter = Point3D.create(0,3.85 + 1.1, 0)
-    slotArcs.addByCenterStartSweep(topCenter, Point3D.create(-.8,  topCenter.y, 0), math.pi)
-    slotArcs.addByCenterStartSweep(bottomCenter, Point3D.create(-.8,  bottomCenter.y, 0), -math.pi)
+
+    # TODO: Dry this up
+    slotArcs.addByCenterStartSweep(topCenter, Point3D.create(-0.8,  topCenter.y, 0), math.pi)
+    slotArcs.addByCenterStartSweep(topCenter, Point3D.create(-0.35/2,  topCenter.y, 0), math.pi)
+
+    slotArcs.addByCenterStartSweep(bottomCenter, Point3D.create(-0.8,  bottomCenter.y, 0), -math.pi)
+    slotArcs.addByCenterStartSweep(bottomCenter, Point3D.create(-0.35/2,  bottomCenter.y, 0), -math.pi)
+
     slotLines.addByTwoPoints(Point3D.create(-0.8, topCenter.y, 0), Point3D.create(-0.8, bottomCenter.y, 0))
+    slotLines.addByTwoPoints(Point3D.create(-0.35/2, topCenter.y, 0), Point3D.create(-0.35/2, bottomCenter.y, 0))
+
     slotLines.addByTwoPoints(Point3D.create(0.8, topCenter.y, 0), Point3D.create(0.8, bottomCenter.y, 0))
+    
+    slotLines.addByTwoPoints(Point3D.create(0.35/2, topCenter.y, 0), Point3D.create(0.35/2, bottomCenter.y, 0))
+
+
     slotPadExtrude = extrudes.addSimple(slotSketch.profiles.item(0), ValueInput.createByReal(-0.4),FeatureOperations.JoinFeatureOperation)
+    slotExtrude = extrudes.addSimple(slotSketch.profiles.item(1), ValueInput.createByReal(-0.5), FeatureOperations.CutFeatureOperation)
 
 
     bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, Settings.camAngle - 9)
@@ -91,5 +104,6 @@ def createShell():
     bumper.add(bumper1)
     bumper.add(bumper2)
     bumper.add(slotPadExtrude)
+    bumper.add(slotExtrude)
     mirrors = shell.features.mirrorFeatures
     mirrors.add(mirrors.createInput(bumper, shell.xZConstructionPlane))
