@@ -1,5 +1,7 @@
 
 import adsk.core, adsk.fusion, adsk.cam, traceback, math
+from adsk.core import ValueInput, Point3D
+from adsk.fusion import FeatureOperations
 from .utilities import *
 from .settings import Settings
 
@@ -8,7 +10,7 @@ ui = app.userInterface
 
 product = app.activeProduct
 design = adsk.fusion.Design.cast(product)
-origin = adsk.core.Point3D.create(0,0,0)
+origin = Point3D.create(0,0,0)
 zAxis = design.rootComponent.zConstructionAxis
 
 # More numbers
@@ -38,23 +40,47 @@ def createShell():
     topFace = baseExtrude.endFaces.item(0)
 
 
-    hullSketch = sketches.add(topFace)
+    hullSketch = sketches.addWithoutEdges(topFace)
 
-   # half moon nub
-    circles.addByCenterRadius(adsk.core.Point3D.create(-(shellRadius + 1), 0, 0), 0.4)
-    
-    domeInput = extrudes.createInput(baseSketch.profiles.item(0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
-    extrudeDistance = adsk.fusion.DistanceExtentDefinition.create(adsk.core.ValueInput.createByReal(4.9))
-
-    domeInput.setOneSideExtent(extrudeDistance, adsk.fusion.ExtentDirections.PositiveExtentDirection)
-    domeInput.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal(2.1))
-    extrudes.add(domeInput)
-
-    arcs = hullSketch.sketchCurves.sketchArcs
-    arcs.addByCenterStartSweep(adsk.core.Point3D.create(shellRadius + 0.1, -0.6, 0), adsk.core.Point3D.create(shellRadius + 0.1 - 0.5, -0.6, 0), math.pi)
-    arcs.addByCenterStartSweep(adsk.core.Point3D.create(shellRadius + 0.1, 0.6, 0), adsk.core.Point3D.create(shellRadius + 0.1 + 0.5, 0.6, 0), math.pi)
+   # down cam support
+    hullCircles = hullSketch.sketchCurves.sketchCircles
+    hullCircles.addByCenterRadius(Point3D.create(-(shellRadius + 0.1), 0, 0), 0.4)
     lines = hullSketch.sketchCurves.sketchLines
-    lines.addByTwoPoints(adsk.core.Point3D.create(shellRadius + 0.1 - 0.5, -0.6, 0), adsk.core.Point3D.create(shellRadius + 0.1 - 0.5, 0.6, 0))
-    lines.addByTwoPoints(adsk.core.Point3D.create(shellRadius + 0.1 + 0.5, -0.6, 0), adsk.core.Point3D.create(shellRadius + 0.1 + 0.5, 0.6, 0))
-    extrudes.addSimple(hullSketch.profiles.item(1), adsk.core.ValueInput.createByReal(-3.0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
 
+    cubeCenter = Point3D.create(-shellRadius, 0, 0)
+    lines.addCenterPointRectangle(cubeCenter, Point3D.create(cubeCenter.x + 0.25, cubeCenter.y + 0.4, cubeCenter.z))
+
+    extrudeDistance = ValueInput.createByReal(-4.9)
+    extrudes.addSimple(getAllSketchProfiles(hullSketch), extrudeDistance, FeatureOperations.JoinFeatureOperation)
+
+
+    bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, Settings.camAngle - 9)
+    bumperProfileCenter = Point3D.create(1.63, -shellRadius, 0)
+    bumperSketch.sketchCurves.sketchCircles.addByCenterRadius(bumperProfileCenter, 0.5)
+    revolves = shell.features.revolveFeatures
+    revolveInput = revolves.createInput(bumperSketch.profiles.item(0), shell.zConstructionAxis, FeatureOperations.JoinFeatureOperation)
+    revolveInput.setAngleExtent(False, ValueInput.createByString('8 deg'))
+    bumper1 = revolves.add(revolveInput)
+    bumperSketch.sketchCurves.sketchLines.addByTwoPoints(Point3D.create(bumperProfileCenter.x + 0.5, bumperProfileCenter.y, bumperProfileCenter.z ), Point3D.create(bumperProfileCenter.x - 0.5, bumperProfileCenter.y, bumperProfileCenter.z ))
+    capProfile = findProfileContainingPoint(bumperSketch, Point3D.create(bumperProfileCenter.x, bumperProfileCenter.y + 0.01, bumperProfileCenter.z))
+    capInput = revolves.createInput(capProfile, bumperSketch.sketchCurves.sketchLines.item(0), FeatureOperations.JoinFeatureOperation)
+    capInput.setAngleExtent(False, ValueInput.createByString('180 deg'))
+    bumper2 = revolves.add(capInput)
+
+    # create plane tangent to shell at slot point
+    planeInput = shell.constructionPlanes.createInput()
+    planeInput.setByTangent(baseExtrude.faces.item(1), ValueInput.createByString('0 deg'), shell.yZConstructionPlane)
+    slotPlane = shell.constructionPlanes.add(planeInput)
+
+
+    # Creates a slot at a fixed distance from the cam support
+    slotSketch = createSketchAtAngle(slotPlane, 15 * 120/drumDiameter)
+    slotArcs = slotSketch.sketchCurves.sketchArcs
+    topCenter = Point3D.create()
+    slotArcs.addByCenterStartSweep()
+
+    bumper = adsk.core.ObjectCollection.create()
+    bumper.add(bumper1)
+    bumper.add(bumper2)
+    mirrors = shell.features.mirrorFeatures
+    mirrors.add(mirrors.createInput(bumper, shell.xZConstructionPlane))

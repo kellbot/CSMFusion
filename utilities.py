@@ -94,3 +94,19 @@ def findProfileContainingPoint(sketch, point: adsk.core.Point3D):
 # really only checks the bounding box    
 def is_point_inside_profile(point: adsk.core.Point3D, profile: adsk.fusion.Profile):
     return profile.boundingBox.minPoint.x <= point.x <= profile.boundingBox.maxPoint.x and profile.boundingBox.minPoint.y <= point.y <=profile.boundingBox.maxPoint.y
+
+#only goes through origin
+def createSketchAtAngle(existing_plane: adsk.fusion.ConstructionPlane, angle_degrees: float) -> adsk.fusion.Sketch:
+    try:
+        planes = existing_plane.component.constructionPlanes
+        planeInput = planes.createInput()
+         
+        angle = adsk.core.ValueInput.createByString(str(angle_degrees) + 'deg')
+        planeInput.setByAngle(design.rootComponent.zConstructionAxis,  angle, existing_plane)
+        newPlane = planes.add(planeInput)
+        newSketch = existing_plane.component.sketches.add(newPlane)
+        return newSketch
+
+    except Exception as e:
+        ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+        return None
