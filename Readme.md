@@ -1,8 +1,12 @@
 # Circular Sock Knitting Machine 
 In progress port of RKStar42's [OpenSCAD Circular Knitting Machine](https://www.thingiverse.com/thing:6273014).
 
-There is a long list of parts to port over so far I have completed
+There is a long list of parts to port over.
+Completed: 
 * needle drum
+* shell
+
+Render time is approximately 30 seconds on a Nvidia RTX 2080 8GB
 
 Want to see what the script generates without having to load it up? Check out [this preview](https://a360.co/3N7CZcM)
 

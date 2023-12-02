@@ -88,6 +88,7 @@ def createDrum():
     fullDrumExtrude = extrudes.addSimple(upperProfile, adsk.core.ValueInput.createByReal(drumHeight), adsk.fusion.FeatureOperations.JoinFeatureOperation)
 
     # Give the body a useful name
+    drum.name = "Drum"
     drumBody = fullDrumExtrude.bodies.item(0)
     drumBody.name = "Needle Drum"
 

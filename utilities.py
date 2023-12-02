@@ -77,7 +77,7 @@ def drawPolygon(sketch: adsk.fusion.Sketch, center_point: Point3D, num_sides: in
 
 
 # Creates a 360 degree circular pattern
-def circularPattern(featureCollection, quantity):
+def circularPattern(featureCollection: adsk.core.ObjectCollection, quantity: int, angle: int = 360):
     
     firstFeature = featureCollection.item(0)
 
@@ -89,7 +89,7 @@ def circularPattern(featureCollection, quantity):
     circularFeatInput.quantity = adsk.core.ValueInput.createByReal(quantity)
     
     # Set the angle of the circular pattern
-    circularFeatInput.totalAngle = adsk.core.ValueInput.createByString('360 deg')
+    circularFeatInput.totalAngle = adsk.core.ValueInput.createByString( str(angle) + ' deg')
     
     # Set symmetry of the circular pattern
     circularFeatInput.isSymmetric = False

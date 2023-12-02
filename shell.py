@@ -22,6 +22,7 @@ shellThickness = 0.4
 
 def createShell():
     shell = createNewComponent().component
+    shell.name = "Shell"
     sketches = shell.sketches
     baseSketch = sketches.add(shell.xYConstructionPlane)
 
@@ -55,7 +56,14 @@ def createShell():
     planeInput.setByTangent(outsideFace, ValueInput.createByString(str(0)+'deg'), shell.yZConstructionPlane)
     backPlane = shell.constructionPlanes.add(planeInput)
 
+    # create a plane 45 degrees off the cam support
+    planeInput = shell.constructionPlanes.createInput()
+    planeInput.setByTangent(outsideFace, ValueInput.createByString(str(90 + 45)+'deg'), shell.yZConstructionPlane)
+    outsidePlane45 = shell.constructionPlanes.add(planeInput)
+
+
     topFace = baseExtrude.endFaces.item(0)
+
 
 
     hullSketch = sketches.addWithoutEdges(topFace)
@@ -117,7 +125,7 @@ def createShell():
     slotExtrude = extrudes.addSimple(slotSketch.profiles.item(1), ValueInput.createByReal(-0.5), FeatureOperations.CutFeatureOperation)
 
 
-    bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, Settings.camAngle - 9)
+    bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, Settings.ramp() + 9)
     bumperSketch.name = "Bumper Sketch"
     bumperProfileCenter = Point3D.create(1.63, -shellRadius, 0)
     bumperSketch.sketchCurves.sketchCircles.addByCenterRadius(bumperProfileCenter, 0.5)
@@ -158,4 +166,10 @@ def createShell():
     magnetSketch.sketchCurves.sketchCircles.addByCenterRadius(Point3D.create(-6, 0, 0), 0.125)
     extrudes.addSimple(magnetSketch.profiles.item(0), ValueInput.createByReal(-1), FeatureOperations.CutFeatureOperation)
 
-    
+    # holes for cams to line up
+    alignmentSketch = sketches.add(outsidePlane45)
+    alignmentSketch.sketchCurves.sketchCircles.addByCenterRadius(Point3D.create(0, 2.5, 0), 0.35/2)
+    holeExtrude = extrudes.addSimple(alignmentSketch.profiles.item(0), ValueInput.createByReal(-shellThickness - 0.5), FeatureOperations.CutFeatureOperation)
+    holes = adsk.core.ObjectCollection.create()
+    holes.add(holeExtrude)
+    circularPattern(holes, 7, -270)
