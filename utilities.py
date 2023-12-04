@@ -1,6 +1,6 @@
 import adsk.core, adsk.fusion, adsk.cam, traceback, math, types
 from adsk.core import Point3D, ValueInput
-from adsk.fusion import UserParameter, SketchPoint
+from adsk.fusion import UserParameter, SketchPoint, FeatureOperations
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -10,6 +10,9 @@ design = adsk.fusion.Design.cast(product)
 unitsMgr = design.unitsManager
 root = design.rootComponent
 
+shellSpacing = 1.3
+
+# default design units are CM unless explicitly specified or used in a Parameter
 zAxis = design.rootComponent.zConstructionAxis
 
 # Some utilities

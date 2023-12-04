@@ -1,9 +1,8 @@
 #Author-
 #Description-
 
-import adsk.core, adsk.fusion, adsk.cam, traceback, math, json
+import adsk.core, adsk.fusion, adsk.cam, traceback, math
 from .utilities import *
-from .settings import Settings
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -99,7 +98,7 @@ def createDrum():
     # add a profile for the foot
     cLoserSketch = SketchCommandBase(lowerSketch)
     originPoint = lowerSketch.sketchPoints.add(origin)
-    cLoserSketch.createDimensionedCircle(originPoint, f'{Params.drumRadius.expression} - {drumMainThickness}cm - {drumFootThickness}cm')
+    cLoserSketch.createDimensionedCircle(originPoint, f'{Params.drumRadius.expression} - {drumFootThickness}cm')
                                                             
     floorProf = findProfileContainingPoint(lowerSketch, adsk.core.Point3D.create(Params.drumRadius.value - drumFootThickness + 0.1, 0, 0))
     floorExtrude = extrudes.addSimple(floorProf, drumFloorHeight, adsk.fusion.FeatureOperations.JoinFeatureOperation)
@@ -171,5 +170,21 @@ def createDrum():
     revInput = revolves.createInput(sideSketch.profiles.item(3), zAxis, adsk.fusion.FeatureOperations.JoinFeatureOperation)
     revInput.setAngleExtent(False, angle)
     revolves.add(revInput)
+
+    # Move up to sit on the cam
+    # Create a collection of entities for move
+    bodies = adsk.core.ObjectCollection.create()
+    bodies.add(drumBody)
+
+    # Create a transform to do move
+    vector = adsk.core.Vector3D.create(0.0, 0, 0.85)
+    transform = adsk.core.Matrix3D.create()
+    transform.translation = vector
+
+    # Create a move feature
+    moveFeats = drum.features.moveFeatures
+    moveFeatureInput = moveFeats.createInput2(bodies)
+    moveFeatureInput.defineAsFreeMove(transform)
+    moveFeats.add(moveFeatureInput)
 
     return

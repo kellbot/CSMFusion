@@ -15,10 +15,12 @@ origin = Point3D.create(0,0,0)
 zAxis = design.rootComponent.zConstructionAxis
 
 # More numbers
-shellSpacing = 1.3
+
 drumDiameter = Settings.drumDiameter
 shellRadius = drumDiameter/2 + shellSpacing
 shellThickness = 0.4
+# cam size in degrees
+camSize = 15*(120/drumDiameter)
 
 def createShell():
     shell = createNewComponent().component
@@ -47,7 +49,7 @@ def createShell():
   
     # create plane tangent to shell at slot point
     planeInput = shell.constructionPlanes.createInput()
-    planeInput.setByTangent(outsideFace, ValueInput.createByString(str(-90 - (15*(120/drumDiameter)))+'deg'), shell.yZConstructionPlane)
+    planeInput.setByTangent(outsideFace, ValueInput.createByString(str(-90 - (camSize))+'deg'), shell.yZConstructionPlane)
     slotPlane = shell.constructionPlanes.add(planeInput)
     slotPlane.name = "Front Tangent Plane"
 
