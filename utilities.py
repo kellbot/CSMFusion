@@ -1,16 +1,107 @@
-import adsk.core, adsk.fusion, adsk.cam, traceback, math
-from adsk.core import Point3D
+import adsk.core, adsk.fusion, adsk.cam, traceback, math, types
+from adsk.core import Point3D, ValueInput
+from adsk.fusion import UserParameter, SketchPoint
 
 app = adsk.core.Application.get()
 ui = app.userInterface
 
 product = app.activeProduct
 design = adsk.fusion.Design.cast(product)
-
+unitsMgr = design.unitsManager
+root = design.rootComponent
 
 zAxis = design.rootComponent.zConstructionAxis
 
 # Some utilities
+
+class UserParameters:
+    
+    drumDiameter: adsk.fusion.UserParameter
+    drumRadius: adsk.fusion.UserParameter
+    
+    needleCount: adsk.fusion.UserParameter
+    needleSlotDepth: adsk.fusion.UserParameter
+    needleSlotWidth: adsk.fusion.UserParameter
+    yarnSlotWidth: adsk.fusion.UserParameter
+
+    @staticmethod
+    def set(name: str, value: [int, float, str], units: str = None):
+        try:
+            # Check to see if it already exists
+            if parameter:= UserParameters.findByName(name):
+                if units: 
+                    parameter.expression = str(value) + units
+                else: 
+                    parameter.value = value
+            # Otherwise create it
+            else:      
+                if units is None: units = ''
+                input = adsk.core.ValueInput.createByString(str(value) + units)     
+                parameter = design.userParameters.add(name, input, units, 'Created by CSM Generator')
+            setattr(UserParameters, name, parameter)
+        except ValueError as e:
+            ui.messageBox(e)
+
+
+    @staticmethod
+    def findByName(name: str):
+        userParameters = design.userParameters
+
+        for parameter in userParameters:
+            if parameter.name == name:
+                return parameter
+
+        return False
+
+# Classes which make manipulating sketches less vebose
+class SketchCommandBase:
+    
+    def __init__(self, sketch: adsk.fusion.Sketch):
+        self.sketch = sketch
+        self.sketchLines = sketch.sketchCurves.sketchLines
+        self.dims = adsk.fusion.SketchDimensions.cast(self.sketch.sketchDimensions)
+
+
+    def createDimensionedCircle(self, center, dimensionExpression: [str]):
+        sketch = self.sketch
+        radius = unitsMgr.evaluateExpression(dimensionExpression)
+        circle = sketch.sketchCurves.sketchCircles.addByCenterRadius(center, radius)
+
+        textPoint = createShiftedPoint(center, 0.1)
+        dim = self.dims.addRadialDimension(circle, textPoint)
+        dim.parameter.expression = dimensionExpression
+        return circle
+    
+    def createDimensionedCenterPointRectangle(self, center: Point3D, dimensionX: [UserParameter, int, float], dimensionY: [UserParameter, int, float]):
+        if dimensionX is str or dimensionY is str:
+            raise ValueError("String provided as dimension")
+        xDimValue = dimensionX.value if isinstance(dimensionX, UserParameter) else dimensionX
+        yDimValue = dimensionY.value if  isinstance(dimensionY, UserParameter)  else dimensionY
+     
+        pointA = adsk.core.Point3D.create(center.x - xDimValue/2, center.y - yDimValue/2, 0)
+        lines  = self.sketchLines.addCenterPointRectangle(center, pointA)  
+        line1 = lines.item(0)
+        line2 = lines.item(1)
+
+        textPoint = createShiftedPoint(center, 0.1)
+        textPoint2 = createShiftedPoint(center, 0.1)
+        dimX = self.dims.addDistanceDimension(line1.startSketchPoint, line1.endSketchPoint, adsk.fusion.DimensionOrientations.AlignedDimensionOrientation, textPoint )
+        dimY = self.dims.addDistanceDimension(line2.startSketchPoint, line2.endSketchPoint, adsk.fusion.DimensionOrientations.AlignedDimensionOrientation, textPoint2 )
+
+        dimX.parameter.expression = dimensionX.expression if  isinstance(dimensionX, UserParameter) else f'{dimensionX} cm'
+        dimY.parameter.expression = dimensionY.expression if  isinstance(dimensionY, UserParameter) else f'{dimensionY} cm'
+
+        for i in range(lines.count):
+            app.log(str(i))
+            if i == lines.count-1: 
+                pass
+            else:
+               self.sketch.geometricConstraints.addPerpendicular(lines.item(i), lines.item(i+1))
+
+        return lines
+
+
+
 
 def createNewComponent():
     # Get the active design.
@@ -21,6 +112,9 @@ def createNewComponent():
     allOccs = rootComp.occurrences
     newOcc = allOccs.addNewComponent(adsk.core.Matrix3D.create())
     return newOcc
+
+
+
 
 # Adds a two dimension chamfer to the end interior loop of an extrusion
 def chamferExtrusion(extrude, horizontal, vertical):
@@ -152,3 +246,10 @@ def createPointByOffset(originalPoint: Point3D, offset: dict) -> Point3D:
     except ValueError as e:
         ui.messageBox('Failed:\n{}'.format(e))
         return None
+    
+def createShiftedPoint(point: Point3D, distance: float):
+    oldPoint = point.geometry if  isinstance(point, SketchPoint) else point
+    shiftPoint = Point3D.create(oldPoint.x, oldPoint.y, oldPoint.z)
+    shiftPoint.x += distance
+    shiftPoint.y += distance
+    return shiftPoint

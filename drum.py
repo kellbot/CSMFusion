@@ -16,21 +16,20 @@ zAxis = design.rootComponent.zConstructionAxis
 unitsMgr = design.fusionUnitsManager
 unitsMgr.distanceDisplayUnits = adsk.fusion.DistanceUnits.MillimeterDistanceUnits
 
+
+Params = UserParameters
+
 #everything is in CM, which is terrible but I don't know how to change it
 # settings
-drumDiameter = Settings.drumDiameter
-drumRadius = drumDiameter/2
-drumInnerDiameterMain = drumDiameter - 1.1*2
+
+drumMainThickness = 1.1
 drumFootThickness = 1.5
-drumNeedleCount = 134
+
 drumFloorHeight = adsk.core.ValueInput.createByReal(2.0)
 
 # Fixed variables
 drumHeight = 9.25
 
-needleSlotDepth = .75
-needleSlotWidth = .17
-needleSlotTopWidth = .36
 needleSlotHeight = adsk.core.ValueInput.createByReal(7.6)
 needleSlotTopHeight = 2.0
 
@@ -42,28 +41,30 @@ def drawDrumBase(drumComponent: adsk.fusion.Component, gapWidth: float):
  
     sketches = drumComponent.sketches
     sketch = sketches.add(drumComponent.xYConstructionPlane)
-    circles = sketch.sketchCurves.sketchCircles
-    rectangles = sketch.sketchCurves.sketchLines
+
     sketchPoints = sketch.sketchPoints
     
     # Create sketch point at origin
     originPoint = sketchPoints.add(origin)
 
     # outer edge
-    circles.addByCenterRadius(origin, drumRadius)
+    cSketch = SketchCommandBase(sketch)
+    outerCircle = cSketch.createDimensionedCircle(originPoint, Params.drumRadius.name)
     # inner edge
-    circles.addByCenterRadius(origin, drumInnerDiameterMain/2)
+    cSketch.createDimensionedCircle(outerCircle.centerSketchPoint, Params.drumRadius.name + "-" + str(drumMainThickness) + 'cm')
+
     # needle spaces
-    pointA = adsk.core.Point3D.create(drumRadius - needleSlotDepth, -gapWidth/2, 0)
-    pointB = adsk.core.Point3D.create(drumRadius + 1, gapWidth/2, 0)
-    gap = rectangles.addTwoPointRectangle(pointA, pointB)
+
+    gapCenter = Point3D.create( (Params.drumRadius.value - Params.needleSlotDepth.value/2 ) , 0, 0)
+    gap = cSketch.createDimensionedCenterPointRectangle(gapCenter, Params.needleSlotDepth , gapWidth)
     lines = []
     for i in range(gap.count):
       lines.append(gap.item(i))
 
+    sketch.geometricConstraints.addTangent(outerCircle, lines[1])
     
     patternInput = sketch.geometricConstraints.createCircularPatternInput(lines, originPoint)
-    patternInput.quantity = adsk.core.ValueInput.createByReal(drumNeedleCount)
+    patternInput.quantity = adsk.core.ValueInput.createByString(Params.needleCount.name)
     sketch.geometricConstraints.addCircularPattern(patternInput)
 
     return sketch
@@ -77,14 +78,14 @@ def createDrum():
         return
     
 
-    lowerSketch = drawDrumBase(drum, needleSlotWidth)
-    upperSketch = drawDrumBase(drum, needleSlotTopWidth)
+    lowerSketch = drawDrumBase(drum, Params.needleSlotWidth.value)
+    upperSketch = drawDrumBase(drum, Params.yarnSlotWidth.value)
     extrudes = drum.features.extrudeFeatures
 
 
-    drumProfile = findProfileContainingPoint(lowerSketch,  adsk.core.Point3D.create(drumRadius -  needleSlotDepth - .01, 0, 0))
+    drumProfile = findProfileContainingPoint(lowerSketch,  adsk.core.Point3D.create(Params.drumRadius.value -  Params.needleSlotDepth.value - .01, 0, 0))
     drumExtrude = extrudes.addSimple(drumProfile, adsk.core.ValueInput.createByReal(drumHeight - needleSlotTopHeight), adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    upperProfile = findProfileContainingPoint(upperSketch, adsk.core.Point3D.create(drumRadius -  needleSlotDepth - .01, 0, 0))
+    upperProfile = findProfileContainingPoint(upperSketch, adsk.core.Point3D.create(Params.drumRadius.value -  Params.needleSlotDepth.value - .01, 0, 0))
     fullDrumExtrude = extrudes.addSimple(upperProfile, adsk.core.ValueInput.createByReal(drumHeight), adsk.fusion.FeatureOperations.JoinFeatureOperation)
 
     # Give the body a useful name
@@ -93,11 +94,14 @@ def createDrum():
     drumBody.name = "Needle Drum"
 
 
-    chamferExtrusion(fullDrumExtrude, drumRadius - drumInnerDiameterMain/2 - needleSlotDepth, drumTopChamferHeight )
+    chamferExtrusion(fullDrumExtrude, drumMainThickness - Params.needleSlotDepth.value, drumTopChamferHeight )
     
     # add a profile for the foot
-    lowerSketch.sketchCurves.sketchCircles.addByCenterRadius(origin, drumRadius - drumFootThickness)
-    floorProf = findProfileContainingPoint(lowerSketch, adsk.core.Point3D.create(drumRadius - drumFootThickness + 0.1, 0, 0))
+    cLoserSketch = SketchCommandBase(lowerSketch)
+    originPoint = lowerSketch.sketchPoints.add(origin)
+    cLoserSketch.createDimensionedCircle(originPoint, f'{Params.drumRadius.expression} - {drumMainThickness}cm - {drumFootThickness}cm')
+                                                            
+    floorProf = findProfileContainingPoint(lowerSketch, adsk.core.Point3D.create(Params.drumRadius.value - drumFootThickness + 0.1, 0, 0))
     floorExtrude = extrudes.addSimple(floorProf, drumFloorHeight, adsk.fusion.FeatureOperations.JoinFeatureOperation)
     chamferExtrusion(floorExtrude, 0.4, 1)
 
@@ -108,7 +112,7 @@ def createDrum():
     circles = bottomPinSketch.sketchCurves.sketchCircles
     pinRadius = 0.4
     pinHoleRadius = 0.125
-    centerY = drumDiameter/2 - 1.3
+    centerY = Params.drumDiameter.value/2 - 1.3
     circles.addByCenterRadius(adsk.core.Point3D.create(0, centerY, 0), pinRadius)
     circles.addByCenterRadius(adsk.core.Point3D.create(0, centerY, 0), pinHoleRadius)
     circles.addByCenterRadius(adsk.core.Point3D.create(0, centerY, 1.2), pinRadius)
@@ -148,10 +152,10 @@ def createDrum():
     sideSketch = drum.sketches.add(drum.xZConstructionPlane)
     circles = sideSketch.sketchCurves.sketchCircles
 
-    circles.addByCenterRadius(adsk.core.Point3D.create(drumRadius - 0.4, -6.5, 0), .2)
+    circles.addByCenterRadius(adsk.core.Point3D.create(Params.drumRadius.value - 0.4, -6.5, 0), .2)
     rectangles = sideSketch.sketchCurves.sketchLines
-    centerPoint = adsk.core.Point3D.create(drumRadius - 0.4 + 0.16, -6.5, 0 )
-    cornerPoint = adsk.core.Point3D.create(drumRadius - 0.4 + 0.32, -6.5 - 0.2, 0 )
+    centerPoint = adsk.core.Point3D.create(Params.drumRadius.value - 0.4 + 0.16, -6.5, 0 )
+    cornerPoint = adsk.core.Point3D.create(Params.drumRadius.value - 0.4 + 0.32, -6.5 - 0.2, 0 )
 
     rectangles.addCenterPointRectangle(centerPoint, cornerPoint)
 
@@ -163,7 +167,7 @@ def createDrum():
     revolves.add(revInput)
 
     # top rim
-    circles.addByCenterRadius(adsk.core.Point3D.create(drumDiameter/2 - needleSlotDepth  - 0.05, -drumHeight, 0), .05)
+    circles.addByCenterRadius(adsk.core.Point3D.create(Params.drumDiameter.value/2 - Params.needleSlotDepth.value  - 0.05, -drumHeight, 0), .05)
     revInput = revolves.createInput(sideSketch.profiles.item(3), zAxis, adsk.fusion.FeatureOperations.JoinFeatureOperation)
     revInput.setAngleExtent(False, angle)
     revolves.add(revInput)
