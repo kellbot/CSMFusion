@@ -1,6 +1,6 @@
 import adsk.core, adsk.fusion, adsk.cam, traceback, math, types
 from adsk.core import Point3D, ValueInput
-from adsk.fusion import UserParameter, SketchPoint, FeatureOperations
+from adsk.fusion import SketchPoint, FeatureOperations
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -10,52 +10,13 @@ design = adsk.fusion.Design.cast(product)
 unitsMgr = design.unitsManager
 root = design.rootComponent
 
-shellSpacing = 1.3
 
 # default design units are CM unless explicitly specified or used in a Parameter
 zAxis = design.rootComponent.zConstructionAxis
+origin = Point3D.create(0,0,0
+                        )
 
 # Some utilities
-
-class UserParameters:
-    
-    drumDiameter: adsk.fusion.UserParameter
-    drumRadius: adsk.fusion.UserParameter
-    
-    needleCount: adsk.fusion.UserParameter
-    needleSlotDepth: adsk.fusion.UserParameter
-    needleSlotWidth: adsk.fusion.UserParameter
-    yarnSlotWidth: adsk.fusion.UserParameter
-
-    @staticmethod
-    def set(name: str, value: [int, float, str], units: str = None):
-        try:
-            # Check to see if it already exists
-            if parameter:= UserParameters.findByName(name):
-                if units: 
-                    parameter.expression = str(value) + units
-                else: 
-                    parameter.value = value
-            # Otherwise create it
-            else:      
-                if units is None: units = ''
-                input = adsk.core.ValueInput.createByString(str(value) + units)     
-                parameter = design.userParameters.add(name, input, units, 'Created by CSM Generator')
-            setattr(UserParameters, name, parameter)
-        except ValueError as e:
-            ui.messageBox(e)
-
-
-    @staticmethod
-    def findByName(name: str):
-        userParameters = design.userParameters
-
-        for parameter in userParameters:
-            if parameter.name == name:
-                return parameter
-
-        return False
-
 # Classes which make manipulating sketches less vebose
 class SketchCommandBase:
     
@@ -75,11 +36,11 @@ class SketchCommandBase:
         dim.parameter.expression = dimensionExpression
         return circle
     
-    def createDimensionedCenterPointRectangle(self, center: Point3D, dimensionX: [UserParameter, int, float], dimensionY: [UserParameter, int, float]):
+    def createDimensionedCenterPointRectangle(self, center: Point3D, dimensionX: [adsk.fusion.UserParameter, int, float], dimensionY: [adsk.fusion.UserParameter, int, float]):
         if dimensionX is str or dimensionY is str:
             raise ValueError("String provided as dimension")
-        xDimValue = dimensionX.value if isinstance(dimensionX, UserParameter) else dimensionX
-        yDimValue = dimensionY.value if  isinstance(dimensionY, UserParameter)  else dimensionY
+        xDimValue = dimensionX.value if isinstance(dimensionX, adsk.fusion.UserParameter) else dimensionX
+        yDimValue = dimensionY.value if  isinstance(dimensionY, adsk.fusion.UserParameter)  else dimensionY
      
         pointA = adsk.core.Point3D.create(center.x - xDimValue/2, center.y - yDimValue/2, 0)
         lines  = self.sketchLines.addCenterPointRectangle(center, pointA)  
@@ -91,8 +52,8 @@ class SketchCommandBase:
         dimX = self.dims.addDistanceDimension(line1.startSketchPoint, line1.endSketchPoint, adsk.fusion.DimensionOrientations.AlignedDimensionOrientation, textPoint )
         dimY = self.dims.addDistanceDimension(line2.startSketchPoint, line2.endSketchPoint, adsk.fusion.DimensionOrientations.AlignedDimensionOrientation, textPoint2 )
 
-        dimX.parameter.expression = dimensionX.expression if  isinstance(dimensionX, UserParameter) else f'{dimensionX} cm'
-        dimY.parameter.expression = dimensionY.expression if  isinstance(dimensionY, UserParameter) else f'{dimensionY} cm'
+        dimX.parameter.expression = dimensionX.expression if  isinstance(dimensionX, adsk.fusion.UserParameter) else f'{dimensionX} cm'
+        dimY.parameter.expression = dimensionY.expression if  isinstance(dimensionY, adsk.fusion.UserParameter) else f'{dimensionY} cm'
 
         for i in range(lines.count):
             app.log(str(i))
@@ -256,3 +217,4 @@ def createShiftedPoint(point: Point3D, distance: float):
     shiftPoint.x += distance
     shiftPoint.y += distance
     return shiftPoint
+

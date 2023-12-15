@@ -2,17 +2,19 @@ import adsk.core, adsk.fusion, adsk.cam, traceback, math
 from .MachineComponent import *
 from .MachineClasses import *
 
+params = MachineParameters()
 
+# Right now there is no API access to emboss, so these parts must be finished up in the UI. The profiles to emboss are created for them.
 class NeedleCam(MachineComponent):
     featureWidth = 1.8 - .1125
     camRadius: float
 
 
-    def __init__(self, design) -> None:
-        super().__init__(design)
+    def __init__(self) -> None:
+        super().__init__()
         self.component.name = "Needle Cam Up"
         # outer radius is the same size as the shell
-        self.camRadius = UserParameters.drumRadius.value + shellSpacing
+        self.camRadius = params.shellRadius.value
 
         self.createBase()
         wallBody = self.createWall()
@@ -25,7 +27,7 @@ class NeedleCam(MachineComponent):
             baseSketch = self.createBaseSketch()
             revolves = self.component.features.revolveFeatures
 
-            midPoint = Point3D.create(UserParameters.drumRadius.value + self.featureWidth/2, 0, 0)
+            midPoint = Point3D.create(params.drumRadius.value + self.featureWidth/2, 0, 0)
             profile = baseSketch.findProfileContainingPoint(midPoint)
             if profile is None:
                 raise ValueError(f'Failed to find profile at point ({midPoint.x}, {midPoint.y}, {midPoint.z}')
@@ -79,7 +81,7 @@ class NeedleCam(MachineComponent):
     # now we're turned 90 degrees. WHY IS FUSION LIKE THIS
     def createCamSketch(self) -> adsk.fusion.Sketch:
         camSketch = self.createSketch(self.component.yZConstructionPlane, "Cam Up Profile")
-        diameterReal = UserParameters.drumDiameter.value
+        diameterReal = params.drumDiameter.value
 
         camCircumfrence = math.pi * diameterReal
 
@@ -88,7 +90,7 @@ class NeedleCam(MachineComponent):
 
         sketchWidth = diameterReal * 2
         topLeft = Point3D.create(-4.5, 0, 0)
-        camSketch.createDimensionedRectangle(topLeft,'45mm',  f'{UserParameters.drumDiameter.name} * 2')
+        camSketch.createDimensionedRectangle(topLeft,'45mm',  f'{params.drumDiameter.name} * 2')
 
         lowerMidline = Point3D.create(0, 0, 0)
         p1 = Point3D.create(  -4.5, camWidth/2, 0)
@@ -106,7 +108,7 @@ class NeedleCam(MachineComponent):
 
         sketch.createDimensionedCircle(center, '1.25 mm')
         profile = sketch.findProfileContainingPoint(center)
-    
+
         # cut the hole
         extrudeInput = features.extrudeFeatures.createInput(profile, FeatureOperations.CutFeatureOperation)
         extrudeInput.participantBodies = [participantBody]
@@ -122,4 +124,7 @@ class NeedleCam(MachineComponent):
         patternInput.isSymmetric = False
         features.circularPatternFeatures.add(patternInput)
 
-
+class DownNeedleCam(MachineComponent):
+    def __init__(self) -> None:
+        super().__init__()
+        self.component.name = "Needle Cam Down"   

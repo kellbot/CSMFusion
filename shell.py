@@ -4,7 +4,7 @@ from adsk.core import ValueInput, Point3D
 from adsk.fusion import FeatureOperations
 from .utilities import *
 from .hardware import *
-from .settings import Settings
+from .MachineClasses import MachineParameters
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -14,13 +14,12 @@ design = adsk.fusion.Design.cast(product)
 origin = Point3D.create(0,0,0)
 zAxis = design.rootComponent.zConstructionAxis
 
-# More numbers
+params = MachineParameters()
 
-drumDiameter = Settings.drumDiameter
-shellRadius = drumDiameter/2 + shellSpacing
-shellThickness = 0.4
-# cam size in degrees
-camSize = 15*(120/drumDiameter)
+
+# More numbers
+drumDiameter = params.drumDiameter                    
+shellRadius = params.shellRadius
 
 def createShell():
     shell = createNewComponent().component
@@ -30,8 +29,8 @@ def createShell():
 
     # extrude the basic shape
     circles = baseSketch.sketchCurves.sketchCircles
-    circles.addByCenterRadius(origin, shellRadius)
-    circles.addByCenterRadius(origin, shellRadius - shellThickness)
+    circles.addByCenterRadius(origin, shellRadius.value)
+    circles.addByCenterRadius(origin, shellRadius.value - params.shellThickness)
 
     extrudes = shell.features.extrudeFeatures
     baseInput = extrudes.createInput(baseSketch.profiles.item(0), adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
@@ -49,7 +48,7 @@ def createShell():
   
     # create plane tangent to shell at slot point
     planeInput = shell.constructionPlanes.createInput()
-    planeInput.setByTangent(outsideFace, ValueInput.createByString(str(-90 - (camSize))+'deg'), shell.yZConstructionPlane)
+    planeInput.setByTangent(outsideFace, ValueInput.createByString('180 deg - ' + params.camSize.expression), shell.yZConstructionPlane)
     slotPlane = shell.constructionPlanes.add(planeInput)
     slotPlane.name = "Front Tangent Plane"
 
@@ -73,11 +72,11 @@ def createShell():
     cutoutSketch = sketches.addWithoutEdges(topFace)
    # down cam support
     hullCircles = hullSketch.sketchCurves.sketchCircles
-    circleCenter = Point3D.create(-(shellRadius + 0.1), 0, 0)
+    circleCenter = Point3D.create(-(shellRadius.value + 0.1), 0, 0)
     hullSketch.sketchCurves.sketchArcs.addByCenterStartSweep(circleCenter, Point3D.create(circleCenter.x, circleCenter.y + 0.4, circleCenter.z ), math.pi)
     lines = hullSketch.sketchCurves.sketchLines
 
-    cubeCenter = Point3D.create(-shellRadius, 0, 0)
+    cubeCenter = Point3D.create(-shellRadius.value, 0, 0)
     lines.addCenterPointRectangle(cubeCenter, Point3D.create(circleCenter.x, cubeCenter.y + 0.4, cubeCenter.z))
     
     #hole in the middle
@@ -127,9 +126,9 @@ def createShell():
     slotExtrude = extrudes.addSimple(slotSketch.profiles.item(1), ValueInput.createByReal(-0.5), FeatureOperations.CutFeatureOperation)
 
 
-    bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, Settings.ramp() + 9)
+    bumperSketch = createSketchAtAngle(shell.xZConstructionPlane, params.ramp.value + 9)
     bumperSketch.name = "Bumper Sketch"
-    bumperProfileCenter = Point3D.create(1.63, -shellRadius, 0)
+    bumperProfileCenter = Point3D.create(1.63, -shellRadius.value, 0)
     bumperSketch.sketchCurves.sketchCircles.addByCenterRadius(bumperProfileCenter, 0.5)
     bumperSketch.sketchCurves.sketchLines.addByTwoPoints(Point3D.create(bumperProfileCenter.x + 0.5, bumperProfileCenter.y, bumperProfileCenter.z ), Point3D.create(bumperProfileCenter.x - 0.5, bumperProfileCenter.y, bumperProfileCenter.z ))
 
@@ -152,13 +151,13 @@ def createShell():
     mirrors.add(mirrors.createInput(bumper, shell.xZConstructionPlane))
 
     # down_cam cutout
-    cutoutCenter = Point3D.create(-shellRadius, 0, -1.25)
+    cutoutCenter = Point3D.create(-shellRadius.value, 0, -1.25)
     cutoutSize = {"x": 2, "y": .84, "z": 3.1}
     # I already regret how I set this up
     cornerPoint = createPointByOffset(cutoutCenter, {"x": cutoutSize["x"]/2, "y": cutoutSize["y"]/2, "z": 0})
     cutoutSketch.sketchCurves.sketchLines.addCenterPointRectangle(cutoutCenter, cornerPoint)
     extrudes.addSimple(cutoutSketch.profiles.item(0), ValueInput.createByReal(-cutoutSize["z"]), FeatureOperations.CutFeatureOperation)
-    createM3NutCutout(cutoutSketch.referencePlane, Point3D.create( -shellRadius, 0, -1.25))
+    createM3NutCutout(cutoutSketch.referencePlane, Point3D.create( -shellRadius.value, 0, -1.25))
     # bit at bottom for cam, borrowing circleCenter from above which is probably a mistake
     cutoutSketch.sketchCurves.sketchCircles.addByCenterRadius(Point3D.create(circleCenter.x, circleCenter.y, -1.25 - cutoutSize["z"]), 0.25)
     extrudes.addSimple(cutoutSketch.profiles.item(cutoutSketch.profiles.count - 1), ValueInput.createByReal(-0.25), FeatureOperations.CutFeatureOperation)
@@ -171,7 +170,7 @@ def createShell():
     # holes for cams to line up
     alignmentSketch = sketches.add(outsidePlane45)
     alignmentSketch.sketchCurves.sketchCircles.addByCenterRadius(Point3D.create(0, 2.5, 0), 0.35/2)
-    holeExtrude = extrudes.addSimple(alignmentSketch.profiles.item(0), ValueInput.createByReal(-shellThickness - 0.5), FeatureOperations.CutFeatureOperation)
+    holeExtrude = extrudes.addSimple(alignmentSketch.profiles.item(0), ValueInput.createByReal(-params.shellThickness - 0.5), FeatureOperations.CutFeatureOperation)
     holes = adsk.core.ObjectCollection.create()
     holes.add(holeExtrude)
     circularPattern(holes, 7, -270)

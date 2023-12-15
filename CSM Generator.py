@@ -8,24 +8,40 @@ from .drum import createDrum
 from .shell import createShell
 from .utilities import *
 from .NeedleCam import NeedleCam
+from .MainBase import MainBase
+from .MachineComponent import Knob
+from .MachineClasses import MachineParameters
 
-Params = UserParameters
+params = MachineParameters()
+
+
+def sideKnob(angle):
+    knobMatrix = adsk.core.Matrix3D.create()
+
+    knobMatrix.setToRotation(-math.pi / 2, design.rootComponent.yConstructionAxis.geometry.direction, origin)
+    rotationMatrix = adsk.core.Matrix3D.create()
+    rotationMatrix.setToRotation(angle, design.rootComponent.zConstructionAxis.geometry.direction, origin)
+
+    knobMatrix.translation =  adsk.core.Vector3D.create(-params.shellRadius.value + .05, 0, 4.15)
+    knobMatrix.transformBy(rotationMatrix)
+
+    knob = Knob('6mm', '4mm', '20mm', 'Knob 1', False, knobMatrix)
+    knobCollection = adsk.core.ObjectCollection.create()
+    knobCollection.add(knob.component)
+
 def run(context):
     ui = None
     try:
         app = adsk.core.Application.get()
 
-        Params.set('needleCount', 134)
-        Params.set('drumDiameter', 220, 'mm')
-        Params.set('drumRadius',  f'{Params.drumDiameter.name} / 2', "mm")  
-        Params.set('needleSlotDepth', 7.5, "mm" )
-        Params.set('needleSlotWidth', 1.7, 'mm')
-        Params.set('yarnSlotWidth', 3.6, 'mm')
-        Params.set('camAngle', 59, 'deg')
+        # createDrum()
+        # createShell()
+        # needleCam = NeedleCam()
 
-        createDrum()
-        createShell()
-        needleCam = NeedleCam(design)
+        # sideKnob(params.camSize.value)
+        # sideKnob(-params.camSize.value)
+        
+        MainBase()
 
         design.activateRootComponent()
 
